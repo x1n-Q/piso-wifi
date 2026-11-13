@@ -58,7 +58,7 @@ From a PC connected to a Q20 LAN port, open:
 
 `http://192.168.1.1/piso-admin/`
 
-Use the router administrator username and password stored in `deployment-secrets/q20-admin.txt`. The dashboard and its API are protected by HTTP Basic authentication and are reachable only through the router-management side under the current firewall configuration. Do not expose the Q20 management interface to the WAN.
+The dashboard and its API require router-administrator authentication and are restricted to the router-management network.
 
 The dashboard shows:
 
@@ -117,12 +117,3 @@ The project-local toolchain contains Arduino CLI 1.5.1 and Espressif ESP32 core 
 ```
 
 The source remains compatible with the temporary ESP8266, but GPIO27 is selected automatically for ESP32 builds.
-
-## Backups and secrets
-
-- Q20 backup: `router-backups/2026-09-07/q20-backup/`
-- ESP32 pre-AZ Tires backup: `esp32/backups/2026-09-08/esp32-before-az-tires-piso.bin`
-- ESP32 backup SHA-256: `39592e318c6f0cc73e79eae6d24d1703663937ca97d2fd055c7ae53dc5631918`
-- Router and controller secrets: `deployment-secrets/` and `esp8266/AZTiresCoinController/secrets.h`
-
-Never publish or upload the secrets directory, controller secrets, voucher database, transaction log, or router backups.
