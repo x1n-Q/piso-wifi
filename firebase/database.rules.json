@@ -1,0 +1,51 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "admins": {
+      "$adminUid": {
+        ".read": "auth != null && auth.uid === $adminUid",
+        ".write": false,
+        ".validate": "newData.isBoolean()"
+      }
+    },
+    "deviceAccounts": {
+      "$deviceUid": {
+        ".read": "auth != null && auth.uid === $deviceUid",
+        ".write": false,
+        ".validate": "newData.val() === true"
+      }
+    },
+    "devices": {
+      "$deviceUid": {
+        ".read": "auth != null && ((auth.uid === $deviceUid && root.child('deviceAccounts').child(auth.uid).val() === true) || root.child('admins').child(auth.uid).val() === true)",
+        "telemetry": {
+          ".write": "auth != null && auth.uid === $deviceUid && root.child('deviceAccounts').child(auth.uid).val() === true",
+          ".validate": "newData.hasChildren(['ok', 'generated', 'controller_online', 'earnings', 'sessions', 'vouchers', 'alerts', 'cloud_updated_at', 'remote_config']) && newData.child('ok').val() === true && newData.child('generated').isNumber() && newData.child('controller_online').isBoolean() && newData.child('cloud_updated_at').isNumber()"
+        },
+        "desired": {
+          ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+          ".validate": "newData.hasChildren(['revision', 'wait_seconds', 'upload_kbps', 'download_kbps', 'peso_1_seconds', 'peso_5_seconds', 'peso_10_seconds', 'peso_20_seconds', 'voucher_30_price', 'voucher_60_price'])",
+          "revision": { ".validate": "newData.isNumber() && newData.val() > 0" },
+          "wait_seconds": { ".validate": "newData.isNumber() && newData.val() >= 15 && newData.val() <= 120" },
+          "upload_kbps": { ".validate": "newData.isNumber() && newData.val() >= 128 && newData.val() <= 100000" },
+          "download_kbps": { ".validate": "newData.isNumber() && newData.val() >= 256 && newData.val() <= 100000" },
+          "peso_1_seconds": { ".validate": "newData.isNumber() && newData.val() >= 60 && newData.val() <= 86400" },
+          "peso_5_seconds": { ".validate": "newData.isNumber() && newData.val() >= 60 && newData.val() <= 86400" },
+          "peso_10_seconds": { ".validate": "newData.isNumber() && newData.val() >= 60 && newData.val() <= 172800" },
+          "peso_20_seconds": { ".validate": "newData.isNumber() && newData.val() >= 60 && newData.val() <= 345600" },
+          "voucher_30_price": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100000" },
+          "voucher_60_price": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100000" },
+          "$other": { ".validate": false }
+        },
+        "applied": {
+          ".write": "auth != null && auth.uid === $deviceUid && root.child('deviceAccounts').child(auth.uid).val() === true",
+          ".validate": "newData.hasChildren(['revision', 'status', 'message', 'updated_at'])"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

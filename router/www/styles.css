@@ -1,0 +1,207 @@
+:root {
+  --page: #f4f7fb;
+  --surface: #ffffff;
+  --surface-soft: #eef4fb;
+  --text: #152238;
+  --muted: #52627a;
+  --line: #cbd6e4;
+  --blue: #075fdb;
+  --blue-dark: #0649a7;
+  --green: #087a55;
+  --green-soft: #e6f6ef;
+  --amber: #9a5800;
+  --red: #b42318;
+  --shadow: 0 18px 48px rgba(28, 51, 84, .14);
+}
+
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; min-height: 100%; overflow: hidden; }
+body {
+  margin: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  color: var(--text);
+  background: linear-gradient(145deg, #ffffff 0%, var(--page) 48%, #eaf2fb 100%);
+  font: 17px/1.4 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+button, a, input { -webkit-tap-highlight-color: transparent; font: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 4px solid rgba(7, 95, 219, .28); outline-offset: 2px; }
+
+.site-header, main, footer { width: min(calc(100% - 36px), 1120px); margin-inline: auto; }
+.site-header {
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 11px; font-weight: 950; letter-spacing: .08em; }
+.brand-mark {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--blue);
+  font-size: 18px;
+  letter-spacing: -.04em;
+  box-shadow: 0 7px 18px rgba(7, 95, 219, .24);
+}
+.network-state { display: flex; align-items: center; gap: 9px; color: #33445d; font-size: 14px; font-weight: 900; letter-spacing: .08em; }
+.network-state i, .hardware-state i { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 5px rgba(8, 122, 85, .13); }
+
+main { min-height: 0; }
+.hero { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(390px, 460px); align-items: center; gap: clamp(48px, 8vw, 110px); padding: 20px 0; }
+.eyebrow, .micro { margin: 0 0 8px; color: var(--blue-dark); font-weight: 950; font-size: 14px; letter-spacing: .11em; }
+.hero h1 { max-width: 620px; margin: 0; color: #17243a; font-size: clamp(48px, 6vw, 76px); line-height: .99; letter-spacing: -.055em; }
+.hero h1 span { display: block; color: var(--blue); }
+.rates { margin-top: 34px; display: grid; grid-template-columns: repeat(4, 1fr); border-block: 2px solid var(--line); }
+.rates article { padding: 16px 10px; border-right: 1px solid var(--line); }
+.rates article:last-child { border: 0; }
+.rates strong, .rates span { display: block; }
+.rates strong { color: #17243a; font-size: 24px; }
+.rates span { margin-top: 3px; color: var(--muted); font-size: 16px; font-weight: 700; }
+
+.session-card { position: relative; padding: 26px; border: 2px solid #b9c8da; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+.session-card::before { content: ""; position: absolute; left: -2px; top: 24px; width: 5px; height: 58px; border-radius: 0 6px 6px 0; background: var(--blue); }
+.card-head { display: flex; justify-content: space-between; gap: 15px; align-items: flex-start; }
+.card-head h2 { margin: 0; font-size: 29px; }
+.badge { padding: 7px 10px; border: 2px solid #8293aa; border-radius: 6px; color: #42536b; background: #f8fafc; font-weight: 950; font-size: 13px; letter-spacing: .07em; }
+.badge.active { color: #055d40; border-color: var(--green); background: var(--green-soft); }
+.badge.waiting { color: var(--blue-dark); border-color: var(--blue); background: #e9f2ff; }
+.badge.paused { color: #754200; border-color: var(--amber); background: #fff4de; }
+.time-panel { margin-top: 18px; padding: 15px 0; border-block: 2px solid var(--line); }
+.time-panel span, .time-panel strong, .time-panel small { display: block; }
+.time-panel span { color: #42536b; font-weight: 950; font-size: 14px; }
+.time-panel strong { margin: 4px 0; color: #10203a; font: 900 44px/1 ui-monospace, monospace; letter-spacing: -.05em; }
+.time-panel small { color: var(--muted); font-size: 15px; font-weight: 650; }
+.notice { min-height: 48px; margin: 9px 0; display: flex; align-items: center; color: #263750; font-size: 17px; font-weight: 800; }
+
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.button { min-height: 52px; padding: 8px 14px; border: 2px solid #9caec2; border-radius: 9px; color: #1a2a42; background: #f8fafc; cursor: pointer; font-weight: 950; }
+.button:active { transform: translateY(1px); }
+.button:disabled { opacity: .48; cursor: not-allowed; }
+.button.primary, .button.voucher { grid-column: 1 / -1; min-height: 68px; display: flex; align-items: center; justify-content: space-between; text-align: left; }
+.button.primary { border-color: var(--blue); color: #fff; background: var(--blue); box-shadow: 0 8px 18px rgba(7, 95, 219, .18); }
+.button.voucher { border-color: var(--blue); color: var(--blue-dark); background: #edf5ff; }
+.button span strong, .button span small { display: block; }
+.button span strong { font-size: 20px; }
+.button span small { margin-top: 2px; color: inherit; font-size: 14px; font-weight: 750; }
+.button b { font-size: 29px; }
+.button.primary.offline { border-color: var(--amber); color: #4e2b00; background: #fff0d3; }
+.button.quiet { font-size: 15px; }
+.browse { min-height: 68px; margin-top: 9px; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; color: #fff; border: 2px solid var(--green); border-radius: 9px; background: var(--green); text-decoration: none; box-shadow: 0 8px 20px rgba(8, 122, 85, .22); }
+.browse strong, .browse small { display: block; }
+.browse strong { font-size: 20px; }
+.browse small { font-size: 14px; font-weight: 750; }
+.browse b { font-size: 29px; }
+.browse[hidden], .button[hidden] { display: none !important; }
+.hardware-state { margin: 11px 0 0; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 14px; font-weight: 800; }
+.hardware-state i { flex: 0 0 auto; background: #75849a; box-shadow: none; }
+.hardware-state.online { color: #055d40; }
+.hardware-state.online i { background: var(--green); box-shadow: 0 0 0 5px rgba(8, 122, 85, .13); }
+.hardware-state.offline { color: #754200; }
+.hardware-state.offline i { background: var(--amber); }
+
+footer { min-height: 46px; display: flex; align-items: center; justify-content: space-between; border-top: 2px solid var(--line); color: #43536a; font-size: 14px; font-weight: 700; }
+
+.modal[hidden] { display: none; }
+.modal { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 14px; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(20, 34, 55, .58); backdrop-filter: blur(5px); }
+.modal-card { position: relative; width: min(100%, 440px); padding: 26px; text-align: center; border: 2px solid #aebed1; border-radius: 16px; background: #fff; box-shadow: 0 30px 90px rgba(11, 26, 48, .32); }
+.modal-close { position: absolute; right: 7px; top: 5px; width: 48px; height: 48px; border: 0; color: #24354e; background: transparent; font-size: 36px; cursor: pointer; }
+.coin-icon, .voucher-icon { width: 66px; height: 66px; margin: 0 auto 10px; display: grid; place-items: center; border: 3px solid var(--blue); border-radius: 50%; color: var(--blue); background: #edf5ff; font-size: 30px; font-weight: 950; }
+.coin-icon:not(.offline) { animation: pulse 1.2s ease-in-out infinite; }
+.coin-icon.offline { color: var(--amber); border-color: var(--amber); background: #fff3dd; animation: none; }
+.modal-card h2 { margin: 0; color: #14233a; font-size: 30px; }
+.modal-message { min-height: 42px; margin: 10px 0; color: #42536a; font-size: 17px; font-weight: 650; }
+.coin-total { margin: 10px 0; padding: 10px; border: 3px solid var(--green); border-radius: 11px; background: var(--green-soft); }
+.coin-total span, .coin-total strong { display: block; }
+.coin-total span { color: #055d40; font-size: 15px; font-weight: 950; letter-spacing: .1em; }
+.coin-total strong { color: #0b4b36; font: 950 52px/1.05 ui-monospace, monospace; }
+.coin-countdown { display: block; color: #17243a; font: 950 50px/1 ui-monospace, monospace; }
+.modal-rates { margin: 16px 0 12px; padding: 10px 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; border-block: 2px solid var(--line); color: #263750; font-size: 16px; font-weight: 850; }
+.button.coin-done { width: 100%; min-height: 64px; margin-bottom: 8px; border-color: var(--green); color: #fff; background: var(--green); font-size: 18px; box-shadow: 0 8px 20px rgba(8, 122, 85, .2); }
+.button.activate { width: 100%; min-height: 58px; border-color: var(--blue); color: #fff; background: var(--blue); }
+.modal-cancel { min-height: 48px; margin-top: 8px; border: 0; color: #3c4e67; background: transparent; font-weight: 950; cursor: pointer; text-decoration: underline; }
+.voucher-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 13px 0; }
+.voucher-prices strong, .voucher-prices span { padding: 10px; border: 2px solid var(--line); border-radius: 7px; color: #1c2d46; background: #f8fafc; font-size: 16px; }
+.voucher-card label { display: block; margin: 10px 0 6px; text-align: left; color: #263750; font-size: 16px; font-weight: 950; }
+.voucher-card input { width: 100%; height: 60px; padding: 10px 13px; border: 2px solid #8093ac; border-radius: 8px; color: #14233a; background: #fff; text-align: center; text-transform: uppercase; font: 850 21px ui-monospace, monospace; letter-spacing: .06em; }
+.voucher-card input:focus { border-color: var(--blue); }
+
+@keyframes pulse { 50% { transform: scale(1.07); box-shadow: 0 0 0 9px rgba(7, 95, 219, .10); } }
+@media (prefers-reduced-motion: reduce) { .coin-icon:not(.offline) { animation: none; } }
+
+@media (max-width: 820px) {
+  .site-header, main, footer { width: min(calc(100% - 20px), 570px); }
+  .site-header { min-height: 56px; }
+  .brand { font-size: 15px; }
+  .brand-mark { width: 36px; height: 36px; border-radius: 9px; font-size: 15px; }
+  .network-state { font-size: 12px; }
+  .hero { padding: 8px 0; display: flex; flex-direction: column; justify-content: center; gap: 9px; }
+  .hero-copy { width: 100%; }
+  .eyebrow { display: none; }
+  .hero h1 { font-size: 30px; line-height: 1; }
+  .hero h1 span { display: inline; }
+  .rates { margin-top: 8px; }
+  .rates article { padding: 7px 4px; text-align: center; }
+  .rates strong { font-size: 19px; }
+  .rates span { font-size: 14px; }
+  .session-card { width: 100%; padding: 14px; border-radius: 12px; }
+  .session-card::before { top: 13px; height: 35px; }
+  .micro { font-size: 12px; }
+  .card-head h2 { font-size: 24px; }
+  .badge { font-size: 12px; }
+  .time-panel { margin-top: 9px; padding: 8px 0; }
+  .time-panel strong { font-size: 37px; }
+  .time-panel small { font-size: 14px; }
+  .notice { min-height: 38px; margin: 5px 0; font-size: 15px; }
+  .actions { gap: 7px; }
+  .button.primary, .button.voucher, .browse { min-height: 62px; }
+  .button span strong, .browse strong { font-size: 18px; }
+  .button span small, .browse small { font-size: 13px; }
+  .button.quiet { min-height: 46px; }
+  .hardware-state { margin-top: 7px; font-size: 13px; }
+  footer { min-height: 37px; font-size: 12px; }
+  .modal-card { padding: 20px 17px; }
+  .modal-card h2 { font-size: 27px; }
+  .modal-message { font-size: 16px; }
+}
+
+@media (max-width: 820px) { body.session-active .hero-copy { display: none; } }
+@media (max-width: 820px) and (max-height: 700px) {
+  footer { display: none; }
+  .hero h1 { font-size: 26px; }
+  .rates article { padding: 5px 3px; }
+  .session-card { padding: 11px; }
+  .card-head .micro { margin-bottom: 3px; }
+  .time-panel { margin-top: 6px; padding: 6px 0; }
+  .time-panel strong { font-size: 34px; }
+  .notice { min-height: 32px; margin: 3px 0; }
+  .button.primary, .button.voucher { min-height: 57px; }
+  .button.quiet { min-height: 42px; }
+  .hardware-state { margin-top: 5px; }
+  .modal-card { padding: 15px; }
+  .coin-icon, .voucher-icon { width: 52px; height: 52px; margin-bottom: 6px; }
+  .modal-card h2 { font-size: 24px; }
+  .modal-message { min-height: 34px; margin: 7px 0; }
+  .coin-total { padding: 7px; }
+  .coin-total strong { font-size: 42px; }
+  .coin-countdown { font-size: 40px; }
+  .modal-rates { margin: 9px 0 7px; padding: 7px 0; }
+  .voucher-prices { margin: 8px 0; }
+  .voucher-card input { height: 54px; }
+}
+
+@media (max-width: 370px) and (max-height: 650px) {
+  .hero-copy h1 { display: none; }
+  .rates { margin-top: 0; }
+  .site-header { min-height: 50px; }
+  .session-card { padding: 9px; }
+  .time-panel small { display: none; }
+  .button.primary, .button.voucher { min-height: 55px; }
+  .button span small { font-size: 12px; }
+  .hardware-state { font-size: 12px; }
+}

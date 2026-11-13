@@ -1,0 +1,250 @@
+#!/bin/sh
+
+set -eu
+
+CONFIG="${AZ_TIRES_FIREBASE_CONFIG:-/etc/az-tires-firebase.conf}"
+STATE_DIR="${AZ_TIRES_FIREBASE_STATE:-/etc/az-tires-firebase-state}"
+PISO_CONFIG="${AZ_TIRES_PISO_CONFIG:-/etc/az-tires-piso.conf}"
+ADMIN_API="${AZ_TIRES_ADMIN_API:-/www/cgi-bin/piso-admin-api}"
+
+[ -r "$CONFIG" ] || { echo "Missing Firebase configuration: $CONFIG" >&2; exit 1; }
+. "$CONFIG"
+
+: "${FIREBASE_API_KEY:?Set FIREBASE_API_KEY in $CONFIG}"
+: "${FIREBASE_DATABASE_URL:?Set FIREBASE_DATABASE_URL in $CONFIG}"
+: "${FIREBASE_DEVICE_EMAIL:?Set FIREBASE_DEVICE_EMAIL in $CONFIG}"
+: "${FIREBASE_DEVICE_PASSWORD:?Set FIREBASE_DEVICE_PASSWORD in $CONFIG}"
+
+SITE_NAME="${SITE_NAME:-AZ Tires Piso WiFi}"
+AUTH_FILE="$STATE_DIR/auth"
+LAST_REVISION_FILE="$STATE_DIR/last-revision"
+RESPONSE_FILE="$STATE_DIR/response.$$"
+LOCK_DIR="${AZ_TIRES_FIREBASE_LOCK:-/tmp/az-tires-firebase-sync.lock}"
+LOCK_HELD=0
+LOCK_MAX_AGE="${AZ_TIRES_FIREBASE_LOCK_MAX_AGE:-300}"
+
+mkdir -p "$STATE_DIR"
+chmod 700 "$STATE_DIR"
+cleanup() {
+	rm -f "$RESPONSE_FILE"
+	if [ "$LOCK_HELD" = 1 ]; then
+		rm -f "$LOCK_DIR/started"
+		rmdir "$LOCK_DIR" 2>/dev/null || true
+	fi
+}
+trap cleanup EXIT INT TERM
+
+command -v curl >/dev/null 2>&1 || {
+	echo "curl is required. On the Q20 run: opkg update && opkg install curl ca-bundle" >&2
+	exit 1
+}
+
+acquire_lock() {
+	local now started age
+	now="$(date +%s)"
+	if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+		started=0
+		[ -r "$LOCK_DIR/started" ] && started="$(sed -n '1p' "$LOCK_DIR/started")"
+		case "$started" in *[!0-9]*|'') started=0 ;; esac
+		age=$((now - started))
+		if [ "$started" -eq 0 ] || [ "$age" -gt "$LOCK_MAX_AGE" ]; then
+			rm -f "$LOCK_DIR/started"
+			rmdir "$LOCK_DIR" 2>/dev/null || true
+			mkdir "$LOCK_DIR" 2>/dev/null || {
+				echo "Another Firebase sync acquired the lock; skipping this minute." >&2
+				return 1
+			}
+		else
+			echo "Another Firebase sync is still running; skipping this minute." >&2
+			return 1
+		fi
+	fi
+	printf '%s\n' "$now" > "$LOCK_DIR/started"
+	LOCK_HELD=1
+}
+
+json_escape() {
+	printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/[[:cntrl:]]/ /g'
+}
+
+json_string() {
+	local key="$1" file="$2"
+	sed -n "s/.*\"$key\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$file" | head -n 1
+}
+
+json_number() {
+	local key="$1" file="$2"
+	sed -n "s/.*\"$key\"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p" "$file" | head -n 1
+}
+
+sign_in() {
+	local payload code token uid expires now
+	payload="{\"email\":\"$(json_escape "$FIREBASE_DEVICE_EMAIL")\",\"password\":\"$(json_escape "$FIREBASE_DEVICE_PASSWORD")\",\"returnSecureToken\":true}"
+	code="$(printf '%s' "$payload" | curl -sS --connect-timeout 10 --max-time 30 \
+		-X POST -H 'Content-Type: application/json' --data-binary @- \
+		-o "$RESPONSE_FILE" -w '%{http_code}' \
+		"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$FIREBASE_API_KEY")"
+	[ "$code" = 200 ] || {
+		echo "Firebase device sign-in failed (HTTP $code). Check the API key, device email, and password." >&2
+		return 1
+	}
+	token="$(json_string idToken "$RESPONSE_FILE")"
+	uid="$(json_string localId "$RESPONSE_FILE")"
+	expires="$(json_string expiresIn "$RESPONSE_FILE")"
+	case "$expires" in *[!0-9]*|'') expires=3600 ;; esac
+	[ -n "$token" ] && [ -n "$uid" ] || { echo "Firebase sign-in returned no token or UID." >&2; return 1; }
+	now="$(date +%s)"
+	printf '%s\n%s\n%s\n' "$token" "$uid" "$((now + expires - 300))" > "$AUTH_FILE"
+	chmod 600 "$AUTH_FILE"
+}
+
+ensure_auth() {
+	local now expiry
+	if [ -r "$AUTH_FILE" ]; then
+		expiry="$(sed -n '3p' "$AUTH_FILE")"
+		case "$expiry" in *[!0-9]*|'') expiry=0 ;; esac
+		now="$(date +%s)"
+		[ "$expiry" -gt "$now" ] 2>/dev/null && return 0
+	fi
+	sign_in
+}
+
+firebase_request() {
+	local method="$1" path="$2" data="${3:-}" attempt=1 code token url
+	while [ "$attempt" -le 2 ]; do
+		ensure_auth
+		token="$(sed -n '1p' "$AUTH_FILE")"
+		url="${FIREBASE_DATABASE_URL%/}/${path}.json?auth=$token"
+		if [ "$method" = GET ]; then
+			code="$(curl -sS --connect-timeout 10 --max-time 30 -o "$RESPONSE_FILE" -w '%{http_code}' "$url")"
+		else
+			code="$(printf '%s' "$data" | curl -sS --connect-timeout 10 --max-time 30 -X "$method" \
+				-H 'Content-Type: application/json' --data-binary @- \
+				-o "$RESPONSE_FILE" -w '%{http_code}' "$url")"
+		fi
+		case "$code" in
+			200|201) cat "$RESPONSE_FILE"; return 0 ;;
+			401) rm -f "$AUTH_FILE"; attempt=$((attempt + 1)) ;;
+			*) echo "Firebase $method $path failed (HTTP $code)." >&2; return 1 ;;
+		esac
+	done
+	return 1
+}
+
+piso_summary() {
+	REQUEST_METHOD=GET CONTENT_LENGTH=0 QUERY_STRING=action=summary REMOTE_ADDR=127.0.0.1 \
+		"$ADMIN_API" | tail -n 1
+}
+
+current_settings_json() {
+	[ -r "$PISO_CONFIG" ] && . "$PISO_CONFIG"
+	printf '{"wait_seconds":%s,"upload_kbps":%s,"download_kbps":%s,' \
+		"${WAIT_SECONDS:-30}" "${UPLOAD_KBPS:-2048}" "${DOWNLOAD_KBPS:-5120}"
+	printf '"peso_1_seconds":%s,"peso_5_seconds":%s,"peso_10_seconds":%s,"peso_20_seconds":%s,' \
+		"${PESO_1_SECONDS:-600}" "${PESO_5_SECONDS:-3600}" "${PESO_10_SECONDS:-7200}" "${PESO_20_SECONDS:-14400}"
+	printf '"voucher_30_price":%s,"voucher_60_price":%s}' \
+		"${VOUCHER_30_PRICE:-200}" "${VOUCHER_60_PRICE:-400}"
+}
+
+build_telemetry() {
+	local summary prefix uptime
+	summary="$(piso_summary)"
+	case "$summary" in '{"ok":true,'*) ;; *) echo "Local owner API returned invalid data." >&2; return 1 ;; esac
+	prefix="$(printf '%s' "$summary" | sed 's/}[[:space:]]*$//')"
+	uptime="$(cut -d. -f1 /proc/uptime 2>/dev/null || echo 0)"
+	printf '%s,"cloud_updated_at":{".sv":"timestamp"},"router_uptime_seconds":%s,' "$prefix" "$uptime"
+	printf '"site_name":"%s","remote_config":' "$(json_escape "$SITE_NAME")"
+	current_settings_json
+	printf '}'
+}
+
+valid_number() {
+	local value="$1" minimum="$2" maximum="$3"
+	case "$value" in *[!0-9]*|'') return 1 ;; esac
+	[ "$value" -ge "$minimum" ] 2>/dev/null && [ "$value" -le "$maximum" ] 2>/dev/null
+}
+
+replace_setting() {
+	local key="$1" value="$2"
+	if grep -q "^${key}=" "$PISO_CONFIG"; then
+		sed -i "s/^${key}=.*/${key}='${value}'/" "$PISO_CONFIG"
+	else
+		printf "%s='%s'\n" "$key" "$value" >> "$PISO_CONFIG"
+	fi
+}
+
+report_applied() {
+	local uid="$1" revision="$2" status="$3" message="$4" payload
+	payload="{\"revision\":$revision,\"status\":\"$(json_escape "$status")\",\"message\":\"$(json_escape "$message")\",\"updated_at\":{\".sv\":\"timestamp\"}}"
+	firebase_request PUT "devices/$uid/applied" "$payload" >/dev/null || true
+}
+
+apply_desired() {
+	local uid desired revision last wait up down p1 p5 p10 p20 v30 v60 backup
+	uid="$(sed -n '2p' "$AUTH_FILE")"
+	desired="$(firebase_request GET "devices/$uid/desired")" || return 1
+	[ "$desired" != null ] || return 0
+	printf '%s' "$desired" > "$RESPONSE_FILE"
+	revision="$(json_number revision "$RESPONSE_FILE")"
+	case "$revision" in *[!0-9]*|'') echo "Remote config has no valid revision; ignoring it." >&2; return 0 ;; esac
+	last=0; [ -r "$LAST_REVISION_FILE" ] && last="$(sed -n '1p' "$LAST_REVISION_FILE")"
+	[ "$revision" != "$last" ] || return 0
+
+	wait="$(json_number wait_seconds "$RESPONSE_FILE")"
+	up="$(json_number upload_kbps "$RESPONSE_FILE")"
+	down="$(json_number download_kbps "$RESPONSE_FILE")"
+	p1="$(json_number peso_1_seconds "$RESPONSE_FILE")"
+	p5="$(json_number peso_5_seconds "$RESPONSE_FILE")"
+	p10="$(json_number peso_10_seconds "$RESPONSE_FILE")"
+	p20="$(json_number peso_20_seconds "$RESPONSE_FILE")"
+	v30="$(json_number voucher_30_price "$RESPONSE_FILE")"
+	v60="$(json_number voucher_60_price "$RESPONSE_FILE")"
+
+	if ! valid_number "$wait" 15 120 \
+		|| ! valid_number "$up" 128 100000 \
+		|| ! valid_number "$down" 256 100000 \
+		|| ! valid_number "$p1" 60 86400 \
+		|| ! valid_number "$p5" 60 86400 \
+		|| ! valid_number "$p10" 60 172800 \
+		|| ! valid_number "$p20" 60 345600 \
+		|| ! valid_number "$v30" 1 100000 \
+		|| ! valid_number "$v60" 1 100000; then
+		report_applied "$uid" "$revision" rejected "One or more values were outside the safe range."
+		echo "Rejected unsafe remote configuration revision $revision." >&2
+		return 0
+	fi
+
+	backup="/root/az-tires-backups/firebase-config-$(date +%Y%m%d-%H%M%S)"
+	mkdir -p "$backup"
+	cp "$PISO_CONFIG" "$backup/az-tires-piso.conf"
+	replace_setting WAIT_SECONDS "$wait"
+	replace_setting UPLOAD_KBPS "$up"
+	replace_setting DOWNLOAD_KBPS "$down"
+	replace_setting PESO_1_SECONDS "$p1"
+	replace_setting PESO_5_SECONDS "$p5"
+	replace_setting PESO_10_SECONDS "$p10"
+	replace_setting PESO_20_SECONDS "$p20"
+	replace_setting VOUCHER_30_PRICE "$v30"
+	replace_setting VOUCHER_60_PRICE "$v60"
+	chmod 600 "$PISO_CONFIG"
+	printf '%s\n' "$revision" > "$LAST_REVISION_FILE"
+	chmod 600 "$LAST_REVISION_FILE"
+	report_applied "$uid" "$revision" applied "Configuration applied; backup saved on the router."
+}
+
+sync_now() {
+	local uid telemetry
+	acquire_lock || return 0
+	ensure_auth
+	uid="$(sed -n '2p' "$AUTH_FILE")"
+	telemetry="$(build_telemetry)"
+	firebase_request PUT "devices/$uid/telemetry" "$telemetry" >/dev/null
+	apply_desired
+}
+
+case "${1:-sync}" in
+	sync) sync_now ;;
+	test-auth) sign_in; echo "Firebase authentication successful. Device UID: $(sed -n '2p' "$AUTH_FILE")" ;;
+	show-telemetry) build_telemetry; echo ;;
+	*) echo "Usage: $0 {sync|test-auth|show-telemetry}" >&2; exit 2 ;;
+esac

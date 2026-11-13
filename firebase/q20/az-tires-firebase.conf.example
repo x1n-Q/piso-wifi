@@ -1,0 +1,8 @@
+# Copy to /etc/az-tires-firebase.conf on the Q20 and chmod 600.
+# Use a dedicated Firebase Authentication DEVICE account, not the owner account.
+
+FIREBASE_API_KEY='REPLACE_WITH_FIREBASE_WEB_API_KEY'
+FIREBASE_DATABASE_URL='https://REPLACE_WITH_DATABASE_NAME.firebasedatabase.app'
+FIREBASE_DEVICE_EMAIL='q20-device@az-tires.invalid'
+FIREBASE_DEVICE_PASSWORD='REPLACE_WITH_RANDOM_DEVICE_PASSWORD'
+SITE_NAME='AZ Tires Piso WiFi'

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f7fb">
+  <title>AZ Tires Piso WiFi · Remote Owner Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header><strong>AZ TIRES</strong><span>REMOTE PISO WIFI</span></header>
+  <main>
+    <section id="loginView" class="login-card">
+      <p class="eyebrow">OWNER ACCESS</p>
+      <h1>Monitor your Piso WiFi anywhere.</h1>
+      <p>Sign in with the Firebase owner account. The router password is never used here.</p>
+      <form id="loginForm">
+        <label>Email<input id="email" type="email" autocomplete="username" required></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">SIGN IN SECURELY</button>
+      </form>
+      <p id="loginError" class="error" role="alert"></p>
+    </section>
+
+    <section id="dashboardView" hidden>
+      <div class="dashboard-head">
+        <div><p class="eyebrow">LIVE OWNER DASHBOARD</p><h1 id="siteName">AZ Tires Piso WiFi</h1></div>
+        <div class="head-actions"><span id="cloudState" class="status">Checking…</span><button id="refresh" class="secondary">REFRESH</button><button id="logout" class="secondary">SIGN OUT</button></div>
+      </div>
+
+      <div class="metrics">
+        <article><span>TODAY</span><strong id="today">₱0</strong></article>
+        <article><span>ALL TIME</span><strong id="total">₱0</strong></article>
+        <article><span>CONNECTED</span><strong id="connected">0</strong></article>
+        <article><span>ALERTS</span><strong id="alertCount">0</strong></article>
+      </div>
+
+      <div class="grid">
+        <section class="panel">
+          <div class="panel-title"><h2>System</h2><span id="controller">Controller unknown</span></div>
+          <dl class="details"><div><dt>Last cloud sync</dt><dd id="lastSync">—</dd></div><div><dt>Authenticated users</dt><dd id="authenticated">0</dd></div><div><dt>Configuration</dt><dd id="applyState">No remote change</dd></div></dl>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title"><h2>Remote settings</h2><span>Validated by Q20</span></div>
+          <form id="settingsForm" class="settings">
+            <label>Coin window (seconds)<input name="wait_seconds" type="number" min="15" max="120" required></label>
+            <label>Upload limit (kbps)<input name="upload_kbps" type="number" min="128" max="100000" required></label>
+            <label>Download limit (kbps)<input name="download_kbps" type="number" min="256" max="100000" required></label>
+            <label>₱1 time (seconds)<input name="peso_1_seconds" type="number" min="60" max="86400" required></label>
+            <label>₱5 time (seconds)<input name="peso_5_seconds" type="number" min="60" max="86400" required></label>
+            <label>₱10 time (seconds)<input name="peso_10_seconds" type="number" min="60" max="172800" required></label>
+            <label>₱20 time (seconds)<input name="peso_20_seconds" type="number" min="60" max="345600" required></label>
+            <label>1-month voucher price<input name="voucher_30_price" type="number" min="1" max="100000" required></label>
+            <label>2-month voucher price<input name="voucher_60_price" type="number" min="1" max="100000" required></label>
+            <button type="submit">SAVE TO Q20</button>
+          </form>
+          <p id="settingsNotice" class="notice"></p>
+        </section>
+      </div>
+
+      <section class="panel table-panel"><h2>Customer sessions</h2><div class="table-wrap"><table><thead><tr><th>Status</th><th>Device</th><th>Source</th><th>Time left</th><th>Paid</th></tr></thead><tbody id="sessions"></tbody></table></div><p id="emptySessions">No sessions.</p></section>
+      <section class="panel table-panel"><h2>Vouchers</h2><div class="table-wrap"><table><thead><tr><th>Code</th><th>Plan</th><th>Status</th><th>Device</th><th>Expires</th></tr></thead><tbody id="vouchers"></tbody></table></div><p id="emptyVouchers">No vouchers.</p></section>
+      <section class="panel"><h2>Security and hardware alerts</h2><div id="alerts" class="alerts"></div><p id="emptyAlerts">No alerts.</p></section>
+    </section>
+  </main>
+  <footer>AZ Tires · Remote monitoring uses outbound HTTPS only</footer>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+window.AZ_TIRES_FIREBASE = {
+  apiKey: "REPLACE_WITH_FIREBASE_WEB_API_KEY",
+  authDomain: "REPLACE_WITH_EXACT_AUTH_DOMAIN",
+  projectId: "REPLACE_WITH_FIREBASE_PROJECT_ID",
+  databaseUrl: "https://REPLACE_WITH_DATABASE_NAME.firebasedatabase.app",
+  deviceUid: "REPLACE_WITH_DEVICE_USER_UID"
+};

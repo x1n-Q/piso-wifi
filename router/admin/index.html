@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f4f7fb">
+  <title>AZ Tires Piso WiFi · Owner</title>
+  <link rel="stylesheet" href="/piso-admin/styles.css?v=20261103-3">
+</head>
+<body>
+  <header>
+    <div><span class="logo">AZ</span><div><strong>AZ Tires Piso WiFi</strong><small>Owner dashboard · AZ Tires</small></div></div>
+    <button id="refresh" type="button">Refresh status</button>
+  </header>
+
+  <main>
+    <section class="summary" aria-label="Business summary">
+      <article><span>Earned today</span><strong id="today">₱0</strong></article>
+      <article><span>All-time earnings</span><strong id="total">₱0</strong></article>
+      <article><span>Connected now</span><strong id="connected">0</strong></article>
+      <article><span>Security alerts</span><strong id="alertCount">0</strong></article>
+    </section>
+
+    <section class="panel voucher-maker">
+      <div class="panel-title"><div><span>VOUCHERS</span><h1>Create a voucher</h1></div><p>Each code locks to the first device that uses it.</p></div>
+      <div class="plans">
+        <button class="plan" data-plan="30" type="button"><strong>1 month</strong><span>₱200 · one device</span></button>
+        <button class="plan" data-plan="60" type="button"><strong>2 months</strong><span>₱400 · one device</span></button>
+      </div>
+      <div id="createdVoucher" class="created" hidden>
+        <span>NEW VOUCHER CODE</span><strong id="newCode"></strong>
+        <button id="copyCode" type="button">Copy code</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><div><span>LIVE USERS</span><h2>Sessions and devices</h2></div><p id="controller">Checking coin controller…</p></div>
+      <div class="table-wrap"><table><thead><tr><th>Status</th><th>Device</th><th>Access type</th><th>Time left</th><th>Paid</th></tr></thead><tbody id="sessions"></tbody></table></div>
+      <p id="emptySessions" class="empty">No paid sessions recorded yet.</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><div><span>VOUCHER USERS</span><h2>Voucher status</h2></div><p>New, active, and expired codes</p></div>
+      <div class="table-wrap"><table><thead><tr><th>Code</th><th>Plan</th><th>Status</th><th>Bound device</th><th>Expires</th></tr></thead><tbody id="vouchers"></tbody></table></div>
+      <p id="emptyVouchers" class="empty">No vouchers created yet.</p>
+    </section>
+
+    <section class="panel alerts">
+      <div class="panel-title"><div><span>SECURITY</span><h2>Suspicious activity</h2></div><p>Warnings indicate attempts worth reviewing, not proof of an attack.</p></div>
+      <div id="alerts"></div>
+      <p id="emptyAlerts" class="empty">No suspicious activity recorded.</p>
+    </section>
+  </main>
+  <div id="notice" role="status" aria-live="polite"></div>
+  <script src="/piso-admin/app.js?v=20260909-2"></script>
+</body>
+</html>

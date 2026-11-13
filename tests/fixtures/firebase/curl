@@ -1,0 +1,19 @@
+#!/bin/sh
+output=''
+url=''
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		-o) output="$2"; shift 2 ;;
+		http://*|https://*) url="$1"; shift ;;
+		*) shift ;;
+	esac
+done
+
+case "$url" in
+	*accounts:signInWithPassword*)
+		printf '%s\n' '{' '  "idToken": "test-token",' '  "localId": "test-device-uid",' '  "expiresIn": "3600"' '}' > "$output"
+		;;
+	*'/desired.json?'*) printf '%s' 'null' > "$output" ;;
+	*) printf '%s' '{}' > "$output" ;;
+esac
+printf '%s' '200'

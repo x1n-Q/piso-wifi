@@ -1,0 +1,167 @@
+#!/bin/sh
+
+CONFIG="${AZ_TIRES_CONFIG:-/etc/az-tires-piso.conf}"
+STATE_DIR="${AZ_TIRES_STATE_DIR:-/tmp/az-tires-piso}"
+DATA_DIR="${AZ_TIRES_DATA_DIR:-/etc/az-tires-piso-data}"
+NDSCTL="${AZ_TIRES_NDSCTL:-ndsctl}"
+
+[ -r "$CONFIG" ] && . "$CONFIG"
+VOUCHER_30_SECONDS="${VOUCHER_30_SECONDS:-2592000}"
+VOUCHER_60_SECONDS="${VOUCHER_60_SECONDS:-5184000}"
+VOUCHER_30_PRICE="${VOUCHER_30_PRICE:-200}"
+VOUCHER_60_PRICE="${VOUCHER_60_PRICE:-400}"
+
+mkdir -p "$DATA_DIR/sessions" "$DATA_DIR/vouchers"
+chmod 700 "$DATA_DIR" "$DATA_DIR/sessions" "$DATA_DIR/vouchers" 2>/dev/null
+
+PARAMS="$QUERY_STRING"
+if [ "$REQUEST_METHOD" = POST ] && [ "${CONTENT_LENGTH:-0}" -gt 0 ] 2>/dev/null; then
+	IFS= read -r -n "$CONTENT_LENGTH" BODY
+	PARAMS="${PARAMS}${PARAMS:+&}${BODY}"
+fi
+
+param() {
+	local wanted="$1" pair key value oldifs="$IFS"
+	IFS='&'
+	for pair in $PARAMS; do
+		key="${pair%%=*}"; value="${pair#*=}"
+		if [ "$key" = "$wanted" ]; then IFS="$oldifs"; url_decode "$value"; return; fi
+	done
+	IFS="$oldifs"
+}
+
+url_decode() {
+	printf '%s' "$1" | awk '
+		BEGIN { hex = "0123456789ABCDEF" }
+		{
+			gsub(/\+/, " ")
+			for (i = 1; i <= length($0); i++) {
+				c = substr($0, i, 1)
+				if (c == "%" && i + 2 <= length($0)) {
+					hi = index(hex, toupper(substr($0, i + 1, 1))) - 1
+					lo = index(hex, toupper(substr($0, i + 2, 1))) - 1
+					if (hi >= 0 && lo >= 0) {
+						printf "%c", hi * 16 + lo
+						i += 2
+						next_char = 1
+					}
+				}
+				if (!next_char) printf "%s", c
+				next_char = 0
+			}
+		}'
+}
+
+json_string() {
+	printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/[[:cntrl:]]/ /g'
+}
+
+reply() {
+	printf 'Status: %s\r\nContent-Type: application/json\r\nCache-Control: no-store\r\n\r\n%s\n' "$1" "$2"
+	exit 0
+}
+
+nds_json() {
+	local attempt=1 output
+	while [ "$attempt" -le 4 ]; do
+		output="$("$NDSCTL" json 2>&1)"
+		case "$output" in *"thread is busy"*) attempt=$((attempt + 1)); sleep 1 ;; *) printf '%s' "$output"; return ;; esac
+	done
+	printf '{"client_list_length":"0","clients":{}}'
+}
+
+summary() {
+	local now today nds connected authenticated last_seen controller total today_total coin_total voucher_total alerts_count
+	now="$(date +%s)"; today="$(date +%F)"; nds="$(nds_json)"
+	connected="$(printf '%s' "$nds" | sed -n 's/.*"client_list_length":"\([0-9]*\)".*/\1/p' | head -1)"
+	[ -n "$connected" ] || connected=0
+	authenticated="$(printf '%s' "$nds" | grep -c '"state":"Authenticated"')"
+	last_seen=0; [ -r "$STATE_DIR/controller-lastseen" ] && last_seen="$(sed -n '1p' "$STATE_DIR/controller-lastseen")"
+	case "$last_seen" in *[!0-9]*|'') last_seen=0 ;; esac
+	controller=false; [ "$last_seen" -gt 0 ] && [ $((now - last_seen)) -le 45 ] && controller=true
+
+	total=0; today_total=0; coin_total=0; voucher_total=0
+	if [ -r "$DATA_DIR/transactions.log" ]; then
+		read total today_total coin_total voucher_total <<EOF
+$(awk -F'|' -v today="$today" '{a=$4+0; total+=a; if($2==today) day+=a; if($3=="coin") coin+=a; if($3=="voucher") voucher+=a} END {print total+0, day+0, coin+0, voucher+0}' "$DATA_DIR/transactions.log")
+EOF
+	fi
+	alerts_count=0; [ -r "$DATA_DIR/alerts.log" ] && alerts_count="$(wc -l < "$DATA_DIR/alerts.log" | tr -d ' ')"
+
+	printf 'Status: 200 OK\r\nContent-Type: application/json\r\nCache-Control: no-store\r\n\r\n'
+	printf '{"ok":true,"generated":%s,"controller_online":%s,"connected":%s,"authenticated":%s,' "$now" "$controller" "$connected" "$authenticated"
+	printf '"earnings":{"today":%s,"total":%s,"coin":%s,"voucher":%s},"alert_count":%s,' "$today_total" "$total" "$coin_total" "$voucher_total" "$alerts_count"
+
+	printf '"sessions":['
+	first=1
+	for file in "$DATA_DIR"/sessions/*; do
+		[ -r "$file" ] || continue
+		case "$file" in *.tmp.*) continue ;; esac
+		status="$(sed -n '1p' "$file")"; expiry="$(sed -n '2p' "$file")"; mac="$(sed -n '3p' "$file")"
+		source="$(sed -n '4p' "$file")"; paid="$(sed -n '5p' "$file")"; ip="$(sed -n '6p' "$file")"
+		updated="$(sed -n '7p' "$file")"; voucher="$(sed -n '8p' "$file")"
+		case "$expiry" in *[!0-9]*|'') expiry=0 ;; esac
+		case "$paid" in *[!0-9]*|'') paid=0 ;; esac
+		case "$updated" in *[!0-9]*|'') updated=0 ;; esac
+		remaining=0
+		if [ "$status" = active ]; then remaining=$((expiry - now)); [ "$remaining" -gt 0 ] || { remaining=0; status=expired; }; fi
+		[ "$status" = paused ] && remaining="$expiry"
+		[ "$first" = 1 ] || printf ','; first=0
+		printf '{"status":"%s","remaining":%s,"mac":"%s","ip":"%s","source":"%s","paid":%s,"voucher":"%s","updated":%s}' \
+			"$(json_string "$status")" "$remaining" "$(json_string "$mac")" "$(json_string "$ip")" "$(json_string "$source")" "${paid:-0}" "$(json_string "$voucher")" "${updated:-0}"
+	done
+	printf '],"vouchers":['
+	first=1
+	for file in "$DATA_DIR"/vouchers/*; do
+		[ -r "$file" ] || continue
+		case "$file" in *.tmp.*) continue ;; esac
+		code="${file##*/}"; duration="$(sed -n '1p' "$file")"; price="$(sed -n '2p' "$file")"; created="$(sed -n '3p' "$file")"
+		status="$(sed -n '4p' "$file")"; mac="$(sed -n '5p' "$file")"; redeemed="$(sed -n '6p' "$file")"; expires="$(sed -n '7p' "$file")"; ip="$(sed -n '8p' "$file")"
+		case "$duration" in *[!0-9]*|'') duration=0 ;; esac
+		case "$price" in *[!0-9]*|'') price=0 ;; esac
+		case "$created" in *[!0-9]*|'') created=0 ;; esac
+		case "$redeemed" in *[!0-9]*|'') redeemed=0 ;; esac
+		case "$expires" in *[!0-9]*|'') expires=0 ;; esac
+		[ "$status" = active ] && [ "$expires" -le "$now" ] && status=expired
+		plan=30; [ "$duration" = "$VOUCHER_60_SECONDS" ] && plan=60
+		[ "$first" = 1 ] || printf ','; first=0
+		printf '{"code":"%s","plan":%s,"price":%s,"status":"%s","mac":"%s","ip":"%s","created":%s,"redeemed":%s,"expires":%s}' \
+			"$(json_string "$code")" "$plan" "${price:-0}" "$(json_string "$status")" "$(json_string "$mac")" "$(json_string "$ip")" "${created:-0}" "${redeemed:-0}" "$expires"
+	done
+	printf '],"alerts":['
+	first=1
+	if [ -r "$DATA_DIR/alerts.log" ]; then
+		tail -n 50 "$DATA_DIR/alerts.log" | while IFS='|' read -r at type ip mac detail; do
+			[ -n "$at" ] || continue
+			case "$at" in *[!0-9]*|'') at=0 ;; esac
+			[ "$first" = 1 ] || printf ','; first=0
+			printf '{"at":%s,"type":"%s","ip":"%s","mac":"%s","detail":"%s"}' "$at" "$(json_string "$type")" "$(json_string "$ip")" "$(json_string "$mac")" "$(json_string "$detail")"
+		done
+	fi
+	printf ']}\n'
+}
+
+case "$(param action)" in
+	summary|'') summary ;;
+	create_voucher)
+		[ "$REQUEST_METHOD" = POST ] || reply '405 Method Not Allowed' '{"ok":false,"message":"POST required."}'
+		case "$(param plan)" in
+			30) duration="$VOUCHER_30_SECONDS"; price="$VOUCHER_30_PRICE" ;;
+			60) duration="$VOUCHER_60_SECONDS"; price="$VOUCHER_60_PRICE" ;;
+			*) reply '400 Bad Request' '{"ok":false,"message":"Choose a 1-month or 2-month voucher."}' ;;
+		esac
+		exec 9>"$DATA_DIR/action.lock"; flock -x 9
+		while :; do
+			code="AZT$(head -c 24 /dev/urandom | sha256sum | cut -c1-10 | tr 'a-f' 'A-F')"
+			[ ! -e "$DATA_DIR/vouchers/$code" ] && break
+		done
+		now="$(date +%s)"
+		voucher_file="$DATA_DIR/vouchers/$code"
+		voucher_tmp="$voucher_file.tmp.$$"
+		printf '%s\n%s\n%s\nnew\n\n0\n0\n\n' "$duration" "$price" "$now" > "$voucher_tmp"
+		chmod 600 "$voucher_tmp"
+		mv "$voucher_tmp" "$voucher_file"
+		reply '200 OK' "{\"ok\":true,\"code\":\"$code\",\"plan\":$(param plan),\"price\":$price}"
+		;;
+	*) reply '404 Not Found' '{"ok":false,"message":"Unknown owner action."}' ;;
+esac

@@ -1,0 +1,13 @@
+router-backups/
+deployment-secrets/
+esp8266/**/secrets.h
+esp8266/**/build/
+esp32/**/build/
+esp32/backups/
+tools/
+*.bin
+*.ipk
+
+# Live Firebase project configuration. Publish only the matching *.example files.
+firebase/.firebaserc
+firebase/dashboard/config.js

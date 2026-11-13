@@ -1,0 +1,30 @@
+AZ TIRES FIREBASE VALUES TO PROVIDE
+==================================
+
+Copy these PUBLIC values from Firebase Console > Project settings > Your apps > Web app:
+
+1. apiKey: REPLACE_WITH_FIREBASE_WEB_API_KEY
+2. authDomain: REPLACE_WITH_EXACT_AUTH_DOMAIN
+3. projectId: REPLACE_WITH_FIREBASE_PROJECT_ID
+4. databaseURL: https://REPLACE_WITH_DATABASE_NAME.firebasedatabase.app
+5. Firebase Hosting site ID: REPLACE_WITH_HOSTING_SITE_ID
+
+Copy these account identifiers from Firebase Console > Authentication > Users:
+
+6. Owner/admin email:
+7. Owner/admin UID:
+8. Maintenance/admin email:
+9. Maintenance/admin UID:
+10. Dedicated Q20 device email:
+11. Dedicated Q20 device UID:
+
+Dashboard:
+
+12. Dashboard URL:
+
+DO NOT SEND OR STORE EITHER PASSWORD IN THIS FILE.
+
+- The owner password is typed only into the deployed dashboard login page.
+- The Q20 device password is entered locally at the site into
+  /etc/az-tires-firebase.conf and protected with mode 600.
+- Do not use the same account or password for the owner and Q20.
