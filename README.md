@@ -2,6 +2,30 @@
 
 Custom JCG Q20 + ESP32 coin-operated WiFi for AZ Tires.
 
+## Deployment showcase
+
+This is a deployed end-to-end system: a physical coin kiosk feeds an ESP32
+controller, the Q20 manages paid access, customers use a mobile captive portal,
+and the owner monitors the installation through a restricted remote dashboard.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/deployed-coin-kiosk.jpg" alt="Deployed Piso WiFi coin kiosk" width="100%">
+      <br><sub><strong>Deployed hardware.</strong> The illuminated coin acceptor is connected to the optocoupler-isolated ESP32 controller.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/mobile-captive-portal.jpg" alt="Mobile Piso WiFi captive portal showing an active timed session" width="100%">
+      <br><sub><strong>Mobile captive portal.</strong> Customers can view time, pause or resume access, and continue online. This captured fallback state keeps an active session usable while clearly reporting that the physical coin controller is offline.</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/images/remote-owner-dashboard.png" alt="Remote owner dashboard showing Q20 health and validated settings" width="100%">
+  <br><sub><strong>Remote operations.</strong> The owner dashboard reports Q20 and coin-controller health, cloud synchronization, sessions, revenue, alerts, and a narrow set of Q20-validated configuration values.</sub>
+</p>
+
 ## Current deployment status
 
 - JCG Q20 is running ImmortalWrt, openNDS, the AZ Tires captive portal, and the owner dashboard.
